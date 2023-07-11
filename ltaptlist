@@ -1,0 +1,113 @@
+from idpw import akey
+import requests
+import pandas as pd
+import time
+from datetime import datetime,timedelta
+import xmltodict
+import json
+import pyautogui as p
+
+dt = datetime.today().strftime('%Y.%m.%d.')
+sigunguCode = '26350'
+sigunguName = '부산광역시해운대구'
+
+url = 'http://apis.data.go.kr/1613000/AptListService2/getSidoAptList' # 시도
+url = 'http://apis.data.go.kr/1613000/AptListService2/getSigunguAptList'
+
+params ={'serviceKey' : akey, 
+        #  'sidoCode' : sigunguCode,
+         'sigunguCode' : sigunguCode, 
+         'pageNo' : '1', 
+         'numOfRows' : '1' 
+         }
+r = requests.get(url, params=params)
+xml_data = json.loads(json.dumps(xmltodict.parse(r.text)))
+row = xml_data['response']['body']['totalCount']
+pages = int(int(row)/500) + 1
+# df_apt = pd.read_xml(r.text,xpath='./body/items/item')
+
+print(datetime.today(),sigunguCode,sigunguName,'단지수',row,pages,)
+
+for x in range(1,pages+1):
+    params ={'serviceKey' : akey, 
+        #  'sidoCode' : sigunguCode,
+         'sigunguCode' : sigunguCode, 
+         'pageNo' : str(x), 
+         'numOfRows' : '500' 
+         }
+    r = requests.get(url, params=params,verify=False)
+    xml_data = xmltodict.parse(r.text)
+    json_data = json.loads(json.dumps(xml_data))
+    ord_data = json_data['response']['body']['items']['item']
+    print(x,sigunguName)
+    if x == 1:
+        df_apt = pd.DataFrame(ord_data) # ,index=[0]
+    else:
+        tmp = pd.DataFrame(ord_data) # ,index=[0]
+        df_apt = pd.concat([df_apt,tmp])
+        
+print(datetime.today(),sigunguCode,sigunguName,'단지수',len(df_apt))
+
+url1 = 'http://apis.data.go.kr/1613000/AptBasisInfoService1/getAphusBassInfo'  # base 기본
+for x in range(len(df_apt)):
+    # print(x,df_apt['kaptCode'][x]) 
+    params1 ={'serviceKey' : akey, 
+             'kaptCode' : df_apt['kaptCode'][x]
+             }
+    r1 = requests.get(url1, params=params1,verify=False)
+    xml_data1 = xmltodict.parse(r1.text)
+    json_data1 = json.loads(json.dumps(xml_data1))
+    ord_data1 = json_data1['response']['body']['item']
+    if x == 0:
+        df1 = pd.DataFrame(ord_data1,index=[0])
+    else:
+        tmp1 = pd.DataFrame(ord_data1,index=[0])
+        df1 = pd.concat([df1,tmp1])
+        
+print(datetime.today(),sigunguCode,sigunguName,'단지 기본정보',len(df1))
+
+
+for x in range(len(df_apt)):
+    url2 = 'http://apis.data.go.kr/1613000/AptBasisInfoService1/getAphusDtlInfo'  # dt 상세
+    params ={'serviceKey' : akey, 
+             'kaptCode' : df_apt['kaptCode'][x]
+             }
+    r2 = requests.get(url2, params=params,verify=False)
+    xml_data2 = xmltodict.parse(r2.text)
+    ord_data2 = json.loads(json.dumps(xml_data2))
+    # print(x,df_apt['kaptCode'][x])
+    if x == 0:
+        df2 = pd.DataFrame(ord_data2['response']['body']['item'],index=[0])
+    else:
+        tmp2 = pd.DataFrame(ord_data2['response']['body']['item'],index=[0])
+        df2 = pd.concat([df2,tmp2])
+        
+print(datetime.today(),sigunguCode,sigunguName,'단지 기본정보',len(df2))
+
+
+df1.rename(columns={'codeMgrNm':'관리방식','kaptTel':'연락처','kaptDongCnt':'동','hoCnt':'호','kaptdaCnt':'세대',
+                    'kaptUsedate':'사용승인','codeSaleNm':'분양형태','doroJuso':'도로명', 'kaptAddr':'지번',
+                    },inplace=True)
+
+df2.rename(columns={'codeMgr':'일반관리', 'kaptMgrCnt':'관리인원','kaptCcompany':'일반관리업체',
+                    'codeSec':'경비방식', 'kaptdScnt':'경비인원', 'kaptdSecCom':'경비업체',
+                    'kaptdEcnt':'승강기','kaptCode':'단지코드','kaptName':'단지명',},inplace=True)
+
+df1['시군구'] = df1['bjdCode'].str[:5]
+df1[['동','호','세대']] = df1[['동','호','세대']].apply(pd.to_numeric)
+df2[['관리인원','경비인원','승강기']] = df2[['관리인원','경비인원','승강기']].apply(pd.to_numeric)
+
+df_merge = pd.merge(df1,df2, how='left', left_on='kaptCode', right_on='단지코드') # on=None,
+
+columns = ['시군구','분양형태','단지코드','사용승인','단지명','연락처','kaptFax',
+           '세대','동','호','승강기',
+           '관리방식','일반관리','관리인원','일반관리업체','경비방식','경비인원','경비업체',
+           '도로명','지번','bjdCode',
+           ]
+
+print(df_merge[columns].fillna(''))
+p.alert(sigunguCode +' '+sigunguName +'\n' + str(len(df1)))
+
+# df_merge.sort_values(['시군구','사용승인'],ascending=False)[columns].fillna('').to_excel('./내보내기/'+sigunguCode+'_의무관리공동주택_20230630.xlsx',sheet_name = sigunguName)
+import os
+os.startfile('d:/py/nb/내보내기/')
