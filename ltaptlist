@@ -8,7 +8,7 @@ import json
 import pyautogui as p
 
 dt = datetime.today().strftime('%Y.%m.%d.')
-sigunguCode = '26350'
+sigunguCode = '26350' # 시군구 코드
 sigunguName = '부산광역시해운대구'
 
 url = 'http://apis.data.go.kr/1613000/AptListService2/getSidoAptList' # 시도
