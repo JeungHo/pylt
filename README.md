@@ -4,6 +4,10 @@
 - aptlist.py 전국 공동주택목록(단위 all,sido,sigungu)
 - getListSigungu.py 시도별목록을 활용하여 시군구별 자료 취합
 - ltaptlist 전국 공동주택목록중 특정 시도의 시군구 집계
+- rpa_통신판매업.ipynb 통신판매사업자 변동자료 자료정비 대상 확인
+- ltis_지방인허가.ipynb 지방행정인허가 데이터 개방 변동 데이터 처리
+- tn_pubr_public_banner_api.ipynb 현수막 게시대
+- 행정구역_인구현황.ipynb 연령별, 세대원수 별 인구현황
 - 행정동코드(text 10), 행정기관코드(orgcd, text 10)
 - 승강기 설치정보
 - 면허분 자료 정리
